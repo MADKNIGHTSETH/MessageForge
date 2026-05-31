@@ -3,13 +3,12 @@ FROM maven:3.9.6-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-# Copy the Maven wrapper and project files
-COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
+# Copy the Maven project files
+COPY pom.xml ./
 COPY src ./src
 
 # Build the standard Spring Boot .jar file
-RUN chmod +x ./mvnw && ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime with standard Java 21 JRE
 FROM eclipse-temurin:21-jre-jammy
