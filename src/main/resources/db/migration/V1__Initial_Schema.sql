@@ -14,9 +14,7 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    INDEX idx_email (email),
-    INDEX idx_created_at (created_at)
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Messages table
@@ -30,10 +28,7 @@ CREATE TABLE messages (
     sent_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
     metadata JSONB DEFAULT '{}',
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at)
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Channel Messages (formatted versions for each channel)
@@ -50,11 +45,7 @@ CREATE TABLE channel_messages (
     retry_count INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT fk_channel_msg_message FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
-    INDEX idx_message_id (message_id),
-    INDEX idx_channel_type (channel_type),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at)
+    CONSTRAINT fk_channel_msg_message FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
 );
 
 -- Channel Integrations (user's configured channels)
@@ -70,9 +61,7 @@ CREATE TABLE channel_integrations (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
     deleted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT uk_user_channel UNIQUE(user_id, channel_type),
-    INDEX idx_user_id (user_id),
-    INDEX idx_enabled (is_enabled)
+    CONSTRAINT uk_user_channel UNIQUE(user_id, channel_type)
 );
 
 -- Formatter Templates
@@ -86,10 +75,7 @@ CREATE TABLE formatter_templates (
     is_system BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_channel_type (channel_type),
-    INDEX idx_system (is_system)
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Message Recipients (track who received what message on which channel)
@@ -101,9 +87,7 @@ CREATE TABLE message_recipients (
     status VARCHAR(30) DEFAULT 'PENDING',
     delivery_status VARCHAR(30),
     delivery_timestamp TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_channel_message_id (channel_message_id),
-    INDEX idx_status (status)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Message Attachments
@@ -114,8 +98,7 @@ CREATE TABLE message_attachments (
     file_size BIGINT,
     content_type VARCHAR(100),
     storage_path TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_message_id (message_id)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Refresh Tokens for JWT
@@ -125,9 +108,7 @@ CREATE TABLE refresh_tokens (
     token_hash VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    revoked BOOLEAN DEFAULT false,
-    INDEX idx_user_id (user_id),
-    INDEX idx_expires_at (expires_at)
+    revoked BOOLEAN DEFAULT false
 );
 
 -- Audit Log
@@ -139,10 +120,7 @@ CREATE TABLE audit_logs (
     entity_id VARCHAR(255),
     changes JSONB,
     ip_address VARCHAR(45),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_id (user_id),
-    INDEX idx_action (action),
-    INDEX idx_created_at (created_at)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Channel Statistics (for dashboard)
@@ -155,12 +133,34 @@ CREATE TABLE channel_statistics (
     last_sent_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT uk_user_channel_stats UNIQUE(user_id, channel_type),
-    INDEX idx_user_id (user_id)
+    CONSTRAINT uk_user_channel_stats UNIQUE(user_id, channel_type)
 );
 
 -- Create indexes for search optimization
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_created_at ON users(created_at);
+CREATE INDEX idx_messages_user_id ON messages(user_id);
+CREATE INDEX idx_messages_status ON messages(status);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
 CREATE INDEX idx_messages_user_status ON messages(user_id, status);
 CREATE INDEX idx_messages_user_created ON messages(user_id, created_at DESC);
+CREATE INDEX idx_channel_messages_message_id ON channel_messages(message_id);
+CREATE INDEX idx_channel_messages_channel_type ON channel_messages(channel_type);
+CREATE INDEX idx_channel_messages_status ON channel_messages(status);
+CREATE INDEX idx_channel_messages_created_at ON channel_messages(created_at);
 CREATE INDEX idx_channel_messages_channel_status ON channel_messages(channel_type, status);
+CREATE INDEX idx_channel_integrations_user_id ON channel_integrations(user_id);
+CREATE INDEX idx_channel_integrations_enabled ON channel_integrations(is_enabled);
 CREATE INDEX idx_channel_integrations_user_enabled ON channel_integrations(user_id, is_enabled);
+CREATE INDEX idx_formatter_templates_user_id ON formatter_templates(user_id);
+CREATE INDEX idx_formatter_templates_channel_type ON formatter_templates(channel_type);
+CREATE INDEX idx_formatter_templates_system ON formatter_templates(is_system);
+CREATE INDEX idx_message_recipients_channel_message_id ON message_recipients(channel_message_id);
+CREATE INDEX idx_message_recipients_status ON message_recipients(status);
+CREATE INDEX idx_message_attachments_message_id ON message_attachments(message_id);
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
+CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX idx_channel_statistics_user_id ON channel_statistics(user_id);

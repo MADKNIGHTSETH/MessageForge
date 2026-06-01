@@ -1,6 +1,6 @@
 services:
   # -------------------------------------
-  # 1. YOUR SPRING BOOT APPLICATION
+  # 1. YOUR SPRING MVC APPLICATION
   # -------------------------------------
   messageforge-app:
     build: .  # Tells Docker to look for your Dockerfile in this folder
@@ -11,17 +11,19 @@ services:
       - messageforge-network
     environment:
       # Connect to Postgres
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/messageforge
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - DB_URL=jdbc:postgresql://postgres:5432/messageforge
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
       # Connect to Redis
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       # Connect to RabbitMQ
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+      # HS512 JWT signing key must be at least 64 bytes.
+      - JWT_SECRET=dev-messageforge-jwt-secret-change-this-before-production-64-characters-minimum
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,6 +31,12 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   # -------------------------------------
   # 2. INFRASTRUCTURE & DATABASES
@@ -44,7 +52,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - messageforge-network
     healthcheck:
@@ -96,6 +103,8 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: messageforge-pgadmin
+    profiles:
+      - tools
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin

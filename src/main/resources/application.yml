@@ -99,7 +99,7 @@ server:
 # Spring Security & JWT
 app:
   jwt:
-    secret: ${JWT_SECRET:your-super-secret-key-change-this-in-production-min-64-chars}
+    secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION_MS:900000}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   

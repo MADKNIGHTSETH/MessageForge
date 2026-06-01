@@ -1,18 +1,36 @@
 package com.messageforge;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import com.messageforge.config.AppConfig;
+import com.messageforge.config.PersistenceConfig;
+import com.messageforge.config.SecurityConfig;
+import com.messageforge.config.WebMvcConfig;
+import jakarta.servlet.Filter;
+import org.springframework.web.filter.DelegatingFilterProxy;
+import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
-@SpringBootApplication
-@EnableAsync
-@EnableScheduling
-@ComponentScan(basePackages = "com.messageforge")
-public class MessageForgeApplication {
+public class MessageForgeApplication extends AbstractAnnotationConfigDispatcherServletInitializer {
 
-    public static void main(String[] args) {
-        SpringApplication.run(MessageForgeApplication.class, args);
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return new Class<?>[] {
+                AppConfig.class,
+                PersistenceConfig.class,
+                SecurityConfig.class
+        };
+    }
+
+    @Override
+    protected Class<?>[] getServletConfigClasses() {
+        return new Class<?>[] {WebMvcConfig.class};
+    }
+
+    @Override
+    protected String[] getServletMappings() {
+        return new String[] {"/"};
+    }
+
+    @Override
+    protected Filter[] getServletFilters() {
+        return new Filter[] {new DelegatingFilterProxy("springSecurityFilterChain")};
     }
 }

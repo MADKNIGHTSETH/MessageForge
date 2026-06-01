@@ -54,7 +54,7 @@ public class FormatterContext {
      * Get all registered strategies (for UI to show all available channels)
      */
     public Map<ChannelType, MessageFormatterStrategy> getAllStrategies() {
-        return new HashMap<>(strategies);
+        return Map.copyOf(strategies);
     }
     
     /**

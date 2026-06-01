@@ -4,8 +4,9 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.Type;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -19,7 +20,8 @@ import java.util.UUID;
 }, uniqueConstraints = {
     @UniqueConstraint(name = "uk_user_channel", columnNames = {"user_id", "channel_type"})
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

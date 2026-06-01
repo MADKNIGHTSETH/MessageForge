@@ -88,8 +88,7 @@ public class SmsFormatterStrategy implements MessageFormatterStrategy {
     }
     
     private String shortenUrls(String content) {
-        // In a real implementation, call a URL shortening service
-        // For now, just indicate that URLs should be shortened
+        // TODO: Replace this placeholder with a real URL shortening provider integration.
         return URL_PATTERN.matcher(content).replaceAll("[bit.ly/...]");
     }
     

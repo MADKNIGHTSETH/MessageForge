@@ -7,26 +7,19 @@ WORKDIR /app
 COPY pom.xml ./
 COPY src ./src
 
-# Build the standard Spring Boot .jar file
+# Build the plain Spring MVC .war file
 RUN mvn clean package -DskipTests
 
-# Stage 2: Runtime with standard Java 21 JRE
-FROM eclipse-temurin:21-jre-jammy
+# Stage 2: Runtime with external Tomcat, not Spring Boot embedded Tomcat
+FROM tomcat:10.1-jdk21-temurin
 
 # Install curl for the health check
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-# Copy the compiled .jar file from the builder stage
-# (Spring Boot creates a fat jar, so we just grab the main one)
-COPY --from=builder /app/target/*.jar app.jar
-
-# Add health check script
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+# Deploy as /api so existing routes stay http://host:8080/api/...
+RUN rm -rf /usr/local/tomcat/webapps/*
+COPY --from=builder /app/target/messageforge.war /usr/local/tomcat/webapps/api.war
 
 EXPOSE 8080
 
-# Run the standard Java application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["sh", "-c", "ls -lah /usr/local/tomcat/webapps && catalina.sh run"]
