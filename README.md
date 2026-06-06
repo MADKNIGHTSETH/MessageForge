@@ -272,21 +272,21 @@ mvn -Pnative clean package
 ./target/messageforge
 ```
 
-#### Using Docker
-```bash
-# Build native image in Docker (multi-stage)
-docker build -t messageforge:latest .
+#### Using Docker (Docker Compose)
+We have containerized the application and its dependencies (PostgreSQL, Redis, RabbitMQ, pgAdmin) using Docker Compose:
 
-# Run container
-docker run -d \
-  --name messageforge \
-  -p 8080:8080 \
-  --network messageforge-network \
-  -e DB_URL=jdbc:postgresql://postgres:5432/messageforge \
-  -e REDIS_HOST=redis \
-  -e RABBITMQ_HOST=rabbitmq \
-  messageforge:latest
+```bash
+# Build the JVM JAR and run the entire stack in the background
+docker-compose up -d --build
+
+# Check the logs of the backend application
+docker-compose logs -f app
+
+# Stop the stack
+docker-compose down
 ```
+The application runs on port `8085` on the host machine to avoid conflicts with other local servers running on `8080`.
+
 
 ### 3. Configuration
 
@@ -348,18 +348,70 @@ docker-compose up -d
 
 ### 4. Verify Installation
 
+> [!NOTE]
+> We use `127.0.0.1` instead of `localhost` in curl commands to bypass any HSTS policies cached on the host machine.
+
 ```bash
 # Check API health
-curl http://localhost:8080/api/actuator/health
+curl http://127.0.0.1:8085/api/actuator/health
 
 # Check metrics
-curl http://localhost:8080/api/actuator/metrics
-
-# Check active profile
-curl http://localhost:8080/api/actuator/env
+curl http://127.0.0.1:8085/api/actuator/metrics
 ```
 
+### 5. Testing the API (Step-by-Step Flow)
+
+Follow this step-by-step flow in your terminal to test user registration, authentication, channel integration config, message drafting, and formatting preview:
+
+#### Step A: Register a User
+```bash
+curl -X POST http://127.0.0.1:8085/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test@1234","displayName":"Test User"}'
+```
+
+#### Step B: Log In (Obtain Access Token)
+```bash
+curl -X POST http://127.0.0.1:8085/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test@1234"}'
+```
+*Copy the `accessToken` string from the returned JSON response to use as `<ACCESS_TOKEN>` below.*
+
+#### Step C: Enable Integrations (SMS and Twitter)
+By default, previews are only generated for enabled integrations. Run these commands to activate them for the user:
+```bash
+# Enable SMS
+curl -X PUT http://127.0.0.1:8085/api/integrations/SMS \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"enabled":true,"credentials":{},"settings":{}}'
+
+# Enable Twitter/X
+curl -X PUT http://127.0.0.1:8085/api/integrations/TWITTER \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"enabled":true,"credentials":{},"settings":{}}'
+```
+
+#### Step D: Create a Message Draft
+```bash
+curl -X POST http://127.0.0.1:8085/api/messages \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"title":"First Message","rawContent":"Hello World! Please check out https://google.com/deepmind for more details #welcome"}'
+```
+*Copy the message `"id"` UUID from the response to use as `<MESSAGE_ID>` below.*
+
+#### Step E: Preview Channel Formatting
+```bash
+curl -X GET http://127.0.0.1:8085/api/messages/<MESSAGE_ID>/preview \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+This will return a list showing how the message was custom-formatted for SMS (where URLs are formatted to `[URL]`) and Twitter/X (with character constraints applied).
+
 ---
+
 
 ## 📡 API Endpoints
 

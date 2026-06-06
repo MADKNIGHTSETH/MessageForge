@@ -7,29 +7,26 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-# Build Spring Native native image
-RUN mvn -Pnative clean native:compile -DskipTests
+# Build standard fat JAR
+RUN mvn clean package -DskipTests
 
-# Stage 2: Runtime with Spring Native binary
-FROM ubuntu:23.10
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 2: Lightweight JRE runtime
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# Copy the native executable from builder
-COPY --from=builder /app/target/messageforge /app/messageforge
+# Copy the built JAR from builder stage
+COPY --from=builder /app/target/messageforge-1.0.0.jar /app/messageforge.jar
+
+# Install curl for health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Add health check script
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8080/api/actuator/health || exit 1
 
 EXPOSE 8080
 
-# Run the native executable
-ENTRYPOINT ["/app/messageforge"]
-CMD ["-Dspring.profiles.active=prod"]
+# Run the JAR application
+ENTRYPOINT ["java", "-jar", "/app/messageforge.jar"]
+

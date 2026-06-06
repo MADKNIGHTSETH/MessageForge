@@ -258,7 +258,6 @@
                 </configuration>
             </plugin>
 
-            <!-- GraalVM Native Image Maven Plugin -->
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
@@ -267,7 +266,6 @@
                 <configuration>
                     <mainClass>com.messageforge.MessageForgeApplication</mainClass>
                     <buildArgs combine.children="append">
-                        <buildArg>--enable-preview</buildArg>
                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                     </buildArgs>
                 </configuration>
