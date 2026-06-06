@@ -1,0 +1,74 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+
+# IDEs
+.idea/
+.classpath
+.c9/
+*.launch
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+.vscode/
+*.swp
+*.swo
+*~
+
+# Spring
+.springBeans
+
+# Mac
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Database
+database/
+*.db
+
+# Cache
+.cache/
+.gradle/
+
+# Build
+build/
+dist/
+out/
+
+# Temporary files
+tmp/
+temp/
+
+# Native image build artifacts
+*.so
+*.o
+*.a
+
+# Application native binary
+messageforge
+messageforge.exe
+
+# Docker
+.docker/
+*.tar
+*.tar.gz
+
+# Node (if frontend is in same repo)
+node_modules/
+npm-debug.log
+yarn-error.log
