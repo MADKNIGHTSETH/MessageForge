@@ -1,0 +1,38 @@
+\chapter{Étude bibliographique et État de l'art}
+\label{chapter:etat_de_l_art}
+
+Ce chapitre présente une étude approfondie des concepts technologiques clés et des outils logiciels utilisés pour concevoir la plateforme de messagerie MessageForge. Nous analysons l'évolution des architectures Java modernes vers les conteneurs et la compilation native, ainsi que le rôle des bases de données et des middlewares dans les systèmes distribués.
+
+\section{Spring Boot et Spring Native (GraalVM)}
+
+Traditionnellement, les applications Java s'exécutent sur une Machine Virtuelle Java (JVM) en utilisant la compilation à la volée (\textit{Just-In-Time} ou JIT). Bien que performante, cette approche souffre d'un temps de démarrage lent (souvent plusieurs secondes) et d'une consommation mémoire élevée lors de la phase de préchauffage (\textit{warmup}), ce qui est pénalisant dans les environnements de conteneurs légers (Docker, Kubernetes) ou serverless \cite{springnative}.
+
+Pour surmonter ces limites, le projet **Spring Native**, en s'appuyant sur **GraalVM**, introduit la compilation en amont (\textit{Ahead-Of-Time} ou AOT) \cite{graalvm}. 
+\begin{itemize}
+    \item \textbf{Fonctionnement} : L'outil d'analyse statique de GraalVM examine le bytecode de l'application depuis son point d'entrée, élimine le code mort (classes, méthodes et champs inutilisés) et compile le reste directement en un fichier exécutable natif propre au système d'exploitation cible.
+    \item \textbf{Avantages} : Les exécutables obtenus démarrent instantanément (en quelques dizaines de millisecondes) et consomment beaucoup moins de mémoire vive (RAM) dès le démarrage, tout en éliminant le besoin d'installer un JRE sur la machine hôte.
+\end{itemize}
+
+\section{PostgreSQL et le stockage flexible JSONB}
+
+Pour MessageForge, le choix s'est porté sur **PostgreSQL 16**. Ce système de gestion de base de données relationnelle (SGBDR) offre à la fois la robustesse transactionnelle (ACID) pour la gestion des utilisateurs et des messages de base, ainsi que la flexibilité du format non-relationnel **JSONB** (JSON Binaire).
+Le format JSONB stocke les documents sous forme décomposée en mémoire, permettant d'indexer efficacement les champs imbriqués et de réaliser des requêtes ultra-rapides. Dans notre projet, le type JSONB est utilisé pour stocker :
+\begin{itemize}
+    \item Les configurations personnalisables des intégrations des utilisateurs (clés API, configurations spécifiques).
+    \item Les métadonnées enrichies des messages et les listes de décorateurs appliqués à la volée.
+\end{itemize}
+
+\section{Optimisation des performances avec Redis}
+
+**Redis** (Remote Dictionary Server) est une base de données de structure de données en mémoire, utilisée comme cache et magasin de clés-valeurs. 
+Dans les architectures multi-canal, les requêtes répétitives sur les configurations d'intégration ou les jetons de session des utilisateurs peuvent surcharger la base de données relationnelle. L'intégration de Redis en amont de PostgreSQL permet de mettre en cache les profils utilisateurs et les jetons de rafraîchissement (Refresh Tokens), garantissant un temps d'accès inférieur à la milliseconde et améliorant la réactivité globale des APIs.
+
+\section{Communication asynchrone avec RabbitMQ}
+
+Lorsqu'un message doit être envoyé à plusieurs canaux (par exemple, envoyer un e-mail via Mailgun et un SMS via Twilio), le temps d'attente lié aux appels réseaux vers les APIs externes est imprévisible et potentiellement long. Si l'application traitait ces envois de manière synchrone dans le thread de la requête HTTP, l'utilisateur ferait face à de longs temps de latence et le serveur risquerait la saturation.
+
+Pour résoudre ce problème, un agent de messages (\textit{Message Broker}) comme **RabbitMQ** est inséré dans l'architecture \cite{rabbitmqconf}. 
+\begin{itemize}
+    \item \textbf{Principe} : Lorsqu'un utilisateur demande l'envoi d'un message, l'API REST crée les tâches correspondantes sous forme de messages AMQP, les publie dans un échangeur (Exchange) RabbitMQ et retourne immédiatement un accusé de réception à l'utilisateur (le message passe à l'état \texttt{SENDING}).
+    \item \textbf{Traitement Asynchrone} : En arrière-plan, des consommateurs (\textit{workers}) récupèrent les tâches depuis les files d'attente (Queues) RabbitMQ de manière asynchrone, appellent les APIs externes et mettent à jour le statut final dans la base de données. En cas de panne d'une API tierce, RabbitMQ permet de stocker temporairement les tâches dans des files d'attente de lettres mortes (\textit{Dead Letter Queues}) pour retenter l'envoi ultérieurement, sans perte de données.
+\end{itemize}

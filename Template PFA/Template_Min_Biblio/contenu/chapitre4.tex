@@ -1,0 +1,131 @@
+\chapter{Réalisation, Tests et Validation}
+\label{chapter:realisation}
+
+Ce chapitre présente la mise en œuvre pratique de la plateforme MessageForge. Nous décrivons les choix techniques de l'environnement de développement, la configuration Docker et Docker Compose du projet, ainsi que les étapes de tests et de validation de nos APIs.
+
+\section{Environnement de Développement}
+
+La réalisation du projet s'est faite avec l'environnement technique suivant :
+\begin{itemize}
+    \item \textbf{Langage} : Java 21 (LTS).
+    \item \textbf{Framework principal} : Spring Boot 3.3.0.
+    \item \textbf{Gestionnaire de base de données} : PostgreSQL 16 (Image Docker officielle).
+    \item \textbf{Gestionnaire de cache} : Redis 7 (Image Docker officielle).
+    \item \textbf{Agent de messages} : RabbitMQ 3.13 (Image Docker officielle avec console d'administration).
+    \item \textbf{Gestionnaire de dépendances} : Apache Maven 3.9.4.
+\end{itemize}
+
+\section{Dockerisation de l'Application}
+
+Pour simplifier le déploiement local et assurer la reproductibilité de l'application, nous avons mis en œuvre une configuration Docker multi-stage stable et performante.
+
+\subsection{1. Le Fichier Dockerfile}
+La compilation est divisée en deux étapes distinctes (Build et Runtime) afin de minimiser la taille de l'image finale et de renforcer la sécurité en excluant le compilateur et le code source de l'environnement de production.
+
+Le code du fichier \texttt{Dockerfile} est présenté ci-dessous :
+
+\begin{lstlisting}[caption={Dockerfile multi-stage de l'application}, label=lst:dockerfile, frame=single, basicstyle=\footnotesize\ttfamily, keepspaces=true]
+# Stage 1: Build standard executable JAR
+FROM maven:3.9.4-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Stage 2: Runtime JRE
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=builder /app/target/messageforge-1.0.0.jar /app/messageforge.jar
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/messageforge.jar"]
+\end{lstlisting}
+
+\subsection{2. Orchestration via Docker Compose}
+Le fichier \texttt{docker-compose.yml} configure l'ensemble des dépendances nécessaires au fonctionnement du système : PostgreSQL, Redis, RabbitMQ et l'interface d'administration pgAdmin. 
+
+L'application Java (\texttt{messageforge-app}) y est déclarée en liant ses variables de connexion aux hôtes internes de Docker Compose (\texttt{postgres}, \texttt{redis}, \texttt{rabbitmq}). Le port hôte de l'application a été redirigé sur le port **\texttt{8085}** afin de résoudre les conflits avec d'éventuels serveurs Tomcat locaux fonctionnant sur le port par défaut \texttt{8080}.
+
+\section{Validation et Tests d'Intégration}
+
+Nous avons validé le bon fonctionnement de l'ensemble du système à travers un scénario de test complet exécuté via l'outil en ligne de commande \texttt{curl}.
+
+\subsection{Étape A : Inscription de l'utilisateur}
+Nous créons un compte de test en appelant l'API d'inscription :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+curl -X POST http://127.0.0.1:8085/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"test@example.com\",\"password\":\"Test@1234\",\"displayName\":\"Test User\"}"
+\end{lstlisting}
+
+La base PostgreSQL enregistre le nouvel utilisateur et retourne la réponse suivante :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+{
+  "id": "f066cafe-6b55-417f-a796-5ea5713e43d1",
+  "email": "test@example.com",
+  "displayName": "Test User",
+  "isActive": true,
+  "createdAt": "2026-06-06T18:29:27"
+}
+\end{lstlisting}
+
+\subsection{Étape B : Connexion de l'utilisateur}
+Nous connectons l'utilisateur pour obtenir un jeton JWT d'accès sécurisé :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+curl -X POST http://127.0.0.1:8085/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"test@example.com\",\"password\":\"Test@1234\"}"
+\end{lstlisting}
+Cette requête renvoie un jeton signé (\texttt{accessToken}) que nous injectons dans l'en-tête \texttt{Authorization: Bearer <TOKEN>} des requêtes suivantes.
+
+\subsection{Étape C : Configuration des Intégrations}
+Par défaut, le moteur de preview ne génère des résultats que pour les canaux activement configurés par l'utilisateur. Nous activons ici l'intégration **SMS** et **Twitter/X** :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+# Activation de l'integration SMS
+curl -X PUT http://127.0.0.1:8085/api/integrations/SMS \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d "{\"enabled\":true,\"credentials\":{},\"settings\":{}}"
+\end{lstlisting}
+
+\subsection{Étape D : Création d'un Brouillon de Message}
+Nous rédigeons un message brut contenant une URL et un hashtag pour tester les filtres de décoration et de formatage automatique :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+curl -X POST http://127.0.0.1:8085/api/messages \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d "{\"title\":\"First Message\",\"rawContent\":\"Hello World! Please check out https://google.com/deepmind for more details #welcome\"}"
+\end{lstlisting}
+Le système génère un brouillon et nous renvoie son identifiant unique, par exemple \texttt{875fb73d-3412-4231-9f65-f593809e0c23}.
+
+\subsection{Étape E : Génération et Validation des Aperçus}
+Nous appelons l'API d'aperçu dynamique pour valider la mise en conformité du texte selon les canaux :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+curl -X GET http://127.0.0.1:8085/api/messages/875fb73d-3412-4231-9f65-f593809e0c23/preview \
+  -H "Authorization: Bearer <TOKEN>"
+\end{lstlisting}
+
+Le serveur retourne les aperçus formatés en appliquant les règles métiers définies au chapitre 3 :
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, frame=single]
+[
+  {
+    "channelType": "SMS",
+    "formattedContent": "Hello World! Please check out [URL] for more details #welcome",
+    "characterCount": 61,
+    "characterLimit": 160,
+    "requiresTruncation": false
+  },
+  {
+    "channelType": "TWITTER",
+    "formattedContent": "Hello World! Please check out https://google.com/deepmind for more details #welcome",
+    "characterCount": 83,
+    "characterLimit": 280,
+    "requiresTruncation": false
+  }
+]
+\end{lstlisting}
+
+**Analyse du Résultat** : 
+Le moteur a correctement traité les messages de façon différenciée : l'URL a été masquée par le jeton \texttt{[URL]} pour le SMS afin d'éviter le blocage antispam, alors qu'elle a été conservée au complet pour Twitter/X, confirmant la bonne exécution en chaîne des patrons Strategy et Decorator.

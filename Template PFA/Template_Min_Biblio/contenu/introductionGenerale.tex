@@ -1,0 +1,17 @@
+\chapter*{Introduction Générale}
+\label{chapter:introduction}
+\addcontentsline{toc}{chapter}{Introduction Générale}
+
+Dans l'ère numérique actuelle, la communication multi-canal est devenue un pilier fondamental pour la relation client, le marketing et la collaboration interne au sein des organisations. Les entreprises doivent diffuser leurs messages sur une multitude de plateformes telles que les e-mails professionnels, les SMS mobiles, les canaux collaboratifs (Slack, Microsoft Teams) ainsi que les réseaux sociaux (Twitter/X, Facebook Messenger, LinkedIn, WhatsApp, Telegram).
+
+Cependant, chaque canal impose ses propres contraintes techniques et structurelles. Par exemple, un SMS est limité à 160 caractères et nécessite de masquer les URLs complexes pour éviter d'être bloqué par les opérateurs. Twitter/X impose une limite de 280 caractères, tandis que Slack supporte un format de balisage Markdown personnalisé. À l'opposé, l'e-mail requiert des modèles HTML riches et sécurisés. Réécrire manuellement chaque message pour s'adapter à ces spécifications est un processus chronophage, sujet aux erreurs de saisie et inefficace à grande échelle.
+
+Pour résoudre cette problématique, nous avons conçu et développé **MessageForge**, une plateforme de messagerie intelligente et centralisée. L'application permet à un utilisateur de saisir un message brut unique et d'automatiser sa décoration (génération d'emojis, raccourcissement d'URLs, intégration de hashtags et signatures) ainsi que son formatage pour chaque canal de destination, avant de l'expédier de manière asynchrone et fiable.
+
+Ce rapport détaille les phases clés du développement de MessageForge et est structuré comme suit :
+\begin{itemize}
+    \item \textbf{Chapitre 1 : Étude bibliographique et état de l'art} — Une revue des technologies clés telles que Spring Boot, GraalVM Spring Native, et les middlewares de file d'attente (RabbitMQ) et de cache (Redis).
+    \item \textbf{Chapitre 2 : Analyse des besoins et spécifications} — Définition des exigences fonctionnelles et non-fonctionnelles de la plateforme.
+    \item \textbf{Chapitre 3 : Architecture et conception technique} — Présentation détaillée des patrons de conception (\textit{Design Patterns}) implémentés pour garantir la modularité, ainsi que la modélisation de la base de données.
+    \item \textbf{Chapitre 4 : Réalisation, tests et validation} — Détails de l'implémentation, de la dockerisation complète du système et des tests d'intégration réalisés via requêtes API.
+\end{itemize}

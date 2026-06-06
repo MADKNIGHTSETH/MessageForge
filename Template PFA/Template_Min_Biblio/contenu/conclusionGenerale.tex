@@ -1,0 +1,22 @@
+\chapter*{Conclusion Générale}
+\label{chapter:Conclusion}
+\addcontentsline{toc}{chapter}{Conclusion Générale}
+\setcounter{section}{0}
+
+\section{Conclusion}
+
+Ce Projet de Fin d'Année (PFA) a permis de concevoir et de réaliser la plateforme de messagerie multi-canal intelligente \textbf{MessageForge}. Nous avons réussi à mettre en œuvre un backend complet et robuste en s'appuyant sur le framework Spring Boot 21, PostgreSQL, Redis et RabbitMQ, permettant la distribution automatique, simultanée et asynchrone de messages.
+
+L'apport majeur de ce travail réside dans la modélisation logicielle rigoureuse. L'utilisation conjointe des patrons de conception **Strategy** et **Decorator** a permis de construire un pipeline de traitement de texte modulaire, capable de raccourcir les liens, injecter des emojis ou des signatures, et valider la longueur finale du texte selon le canal cible de manière dynamique. L'intégration des WebSockets (STOMP) offre une dimension interactive en temps réel, essentielle pour les éditeurs de contenu moderne.
+
+Ce projet a également été l'opportunité de maîtriser les processus modernes de conteneurisation et d'orchestration (Docker et Docker Compose) et de se confronter aux problématiques de gestion de ressources et de performance mémoire dans les environnements de compilation native.
+
+\section{Perspectives}
+
+Plusieurs évolutions peuvent être envisagées pour étendre les fonctionnalités de MessageForge :
+
+\begin{itemize}
+    \item \textbf{Intégration de l'Intelligence Artificielle} : L'ajout d'un module d'IA générative (via des LLMs comme GPT ou Gemini) permettrait de reformuler dynamiquement le contenu du message brut pour adapter automatiquement le ton (professionnel pour LinkedIn, synthétique pour Twitter, convivial pour Slack) au lieu de se limiter à des règles statiques.
+    \item \textbf{Développement d'une Interface Frontend} : Concevoir un client web dynamique en utilisant des frameworks modernes tels que Next.js ou React, afin d'exploiter pleinement le flux de prévisualisation en temps réel via WebSockets.
+    \item \textbf{Tableau de Bord Analytique} : Mettre en œuvre un module de statistiques pour analyser les taux de livraison, les temps de réponse des APIs externes et l'engagement des utilisateurs par canal.
+\end{itemize}

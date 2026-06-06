@@ -1,0 +1,76 @@
+%------------ Debut Packages ----------------
+
+\usepackage[T1]{fontenc} 
+% Permet une meilleure gestion des accents et caractères spéciaux à l'impression (encodage des fontes en T1)
+
+\usepackage[utf8]{inputenc} 
+% Définit l'encodage des fichiers source en UTF-8 (utile pour les caractères accentués)
+
+\usepackage{lmodern} 
+% Utilise la police Latin Modern (amélioration de la police Computer Modern par défaut)
+
+\usepackage[french]{babel} 
+% Adapte le document au français (traduction automatique de mots comme "Chapter" → "Chapitre", gestion des césures...)
+
+\usepackage{xcolor} 
+% Permet d'utiliser les couleurs dans le document (texte, fond, tableaux, etc.)
+
+\usepackage{multirow} 
+% Pour fusionner plusieurs lignes dans un tableau
+
+\usepackage{makecell} 
+% Pour créer des cellules de tableaux personnalisées (ex : texte sur plusieurs lignes dans une cellule)
+
+\usepackage{float} 
+% Permet un placement plus précis des figures et tableaux (avec [H] pour figer à l’endroit exact)
+
+\usepackage{tablefootnote} 
+% Permet d’ajouter des notes de bas de page dans les tableaux
+
+\usepackage{hyperref} 
+% Pour insérer des liens cliquables (URL, références internes, etc.)
+
+\usepackage{bookmark} 
+% Améliore la gestion des signets PDF (utile en complément de hyperref)
+
+\usepackage{pdfpages} 
+% Permet d'inclure des pages PDF externes dans ton document
+
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e} 
+% Pour écrire des algorithmes formatés (avec numérotation des lignes, règles et indentations)
+
+\usepackage{lipsum} 
+% Pour générer du faux texte (texte de remplissage, utile en phase de test ou maquette)
+
+\usepackage{listings} 
+% Pour insérer du code source avec mise en forme (coloration syntaxique, encadré, etc.)
+
+\usepackage{subcaption} 
+% Pour insérer plusieurs figures ou tableaux côte à côte avec des sous-titres (subfigures/subtables)
+
+\usepackage{lscape} 
+% Permet de faire pivoter certaines pages en mode paysage (utile pour les grands tableaux ou schémas)
+
+\usepackage{url} 
+% Pour gérer l’affichage des URL (utile pour que les adresses web soient bien formatées)
+
+%------------ Fin des packages classiques ----------------
+
+%------------ Entêtes et pieds de page ----------------
+
+\usepackage{fancyhdr} 
+% Permet de personnaliser les entêtes et pieds de pages
+
+\pagestyle{fancy} 
+% Active le style fancy pour toutes les pages standards du document
+
+\renewcommand{\chaptermark}[1]{\markboth{\chaptername \ \thechapter.\ #1}{}} 
+% Personnalise l'entête de gauche (nom du chapitre) : "Chapitre 1. Titre", sans tout mettre en majuscule
+
+\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}} 
+% Personnalise l'entête de droite (nom de la section courante) : "1.1 Titre de section", sans majuscules
+
+\renewcommand{\thesection}{\arabic{section}} 
+% Modifie le style de numérotation des sections (exclut le numéro de chapitre, utile dans les rapports courts)
+
+%------------ Fin Packages ----------------
