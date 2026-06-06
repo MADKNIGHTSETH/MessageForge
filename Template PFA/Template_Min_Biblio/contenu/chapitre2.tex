@@ -1,0 +1,82 @@
+\chapter{Spécifications et Analyse des Besoins}
+\label{chapter:specifications}
+
+Ce chapitre détaille l'analyse des besoins de la plateforme MessageForge. Nous y définissons les exigences fonctionnelles requises pour répondre aux attentes des utilisateurs, ainsi que les exigences non-fonctionnelles garantissant la sécurité, la performance et la robustesse de l'application.
+
+\section{Exigences Fonctionnelles}
+
+Les exigences fonctionnelles décrivent les actions spécifiques que le système doit être capable d'exécuter. Pour MessageForge, elles se divisent en cinq grands modules :
+
+\subsection{1. Gestion de l'Authentification et des Sessions}
+Le système doit assurer une gestion sécurisée des sessions utilisateurs :
+\begin{itemize}
+    \item \textbf{Inscription} : Permettre à un nouvel utilisateur de s'enregistrer en saisissant son nom, son adresse e-mail et son mot de passe.
+    \item \textbf{Connexion} : Authentifier l'utilisateur et générer un jeton d'accès (\textit{Access Token}) à courte durée de vie et un jeton de rafraîchissement (\textit{Refresh Token}) à longue durée de vie.
+    \item \textbf{Rafraîchissement} : Permettre au client d'obtenir un nouvel Access Token à l'aide du Refresh Token sans se reconnecter.
+    \item \textbf{Profil} : Récupérer les informations de profil de l'utilisateur connecté de manière sécurisée.
+\end{itemize}
+
+\subsection{2. Gestion des Brouillons de Messages (CRUD)}
+L'utilisateur doit pouvoir gérer ses messages bruts sous forme de brouillons :
+\begin{itemize}
+    \item Créer un message brut avec un titre et un contenu textuel libre (comprenant des URLs, des hashtags ou des mentions).
+    \item Consulter, modifier ou supprimer un message existant (uniquement si le message est encore à l'état de brouillon ou d'échec d'envoi).
+    \item Dupliquer un message existant pour créer rapidement une nouvelle version de travail.
+\end{itemize}
+
+\subsection{3. Gestion des Intégrations de Canaux}
+L'utilisateur doit pouvoir lier et configurer ses propres accès aux APIs externes :
+\begin{itemize}
+    \item Activer et configurer un canal spécifique (Email, SMS, Twitter, Slack, etc.) en saisissant les informations d'authentification requises (ex: jeton Slack, clé API Twilio, mot de passe SMTP).
+    \item Désactiver temporairement une intégration sans supprimer la configuration sous-jacente.
+    \item Déclencher un test de connectivité unitaire (\textit{Test Integration}) pour vérifier que les identifiants saisis sont valides.
+\end{itemize}
+
+\subsection{4. Moteur d'Aperçu de Formatage Dynamique}
+Avant d'envoyer le message, le système doit générer des aperçus formatés en temps réel :
+\begin{itemize}
+    \item Pour chaque canal actif de l'utilisateur, appliquer les décorateurs sélectionnés (raccourcisseur de lien, signatures, hashtags, emojis).
+    \item Adapter le texte final selon les limites de caractères du canal (ex: insérer des points de suspension à la fin si Twitter dépasse 280 caractères, ou remplacer les liens par \texttt{[URL]} pour le SMS).
+    \item Retourner le nombre de caractères finaux, le statut de troncature et d'éventuels avertissements.
+\end{itemize}
+
+\subsection{5. Envoi Asynchrone des Messages}
+\begin{itemize}
+    \item L'utilisateur peut déclencher l'envoi d'un message vers une liste de canaux cibles.
+    \item L'envoi doit s'effectuer de manière asynchrone en arrière-plan pour éviter de bloquer l'interface.
+    \item Le système doit proposer un \textbf{mode test} permettant de simuler l'envoi vers les APIs externes tout en générant le flux d'événements complet.
+\end{itemize}
+
+\section{Exigences Non-Fonctionnelles}
+
+Les exigences non-fonctionnelles décrivent les caractéristiques de qualité du système (sécurité, performance, évolutivité) :
+
+\begin{enumerate}
+    \item \textbf{Sécurité des Données} : Les mots de passe doivent être hachés en base de données à l'aide de l'algorithme BCrypt. De plus, les jetons API et clés d'intégration saisis par les utilisateurs doivent être chiffrés de manière forte dans la base PostgreSQL en utilisant le protocole AES-256-GCM.
+    \item \textbf{Performance et Temps de Réponse} : L'application doit démarrer en moins de 15 secondes au sein de son conteneur Docker et répondre aux requêtes de santé (Actuator) en moins de 500ms.
+    \item \textbf{Robustesse et Tolérance aux Pannes} : Une panne sur une API tierce (ex: panne temporaire de l'API LinkedIn) ne doit pas bloquer ou faire échouer les envois sur les autres canaux (SMS ou E-mail). Les tâches d'envoi doivent être isolées de manière unitaire.
+    \item \textbf{Limitation de Débit (Rate Limiting)} : Pour prévenir les abus et les attaques de type déni de service (DoS), chaque utilisateur est limité à un maximum de 100 requêtes API par minute. Les requêtes excédentaires doivent recevoir un code d'erreur HTTP 429 (\textit{Too Many Requests}).
+    \item \textbf{Extensibilité de l'Architecture} : Le code doit être structuré de manière à pouvoir ajouter un 9\textsuperscript{ème} canal (par exemple, Discord) ou un nouveau décorateur de texte en écrivant une classe isolée, sans modifier le cœur de l'application.
+\end{enumerate}
+
+\section{Cas d'Utilisation Principal}
+
+Le diagramme de cas d'utilisation ci-dessous résume les interactions de l'utilisateur connecté avec MessageForge :
+
+\begin{table}[H]
+    \centering
+    \caption{Cas d'utilisation : Interactions utilisateur}
+    \label{tab:use_cases}
+    \begin{tabular}{|l|p{10cm}|}
+        \hline
+        \textbf{Acteur} & Utilisateur Authentifié \\
+        \hline
+        \textbf{Cas d'utilisation} & 
+        1. S'authentifier (Connexion / Rafraîchir Session) \newline
+        2. Configurer et tester des intégrations (SMS, Twitter, Slack...) \newline
+        3. Rédiger et éditer un brouillon de message \newline
+        4. Demander un aperçu en direct formaté par canal \newline
+        5. Lancer l'envoi d'un message vers des canaux sélectionnés \\
+        \hline
+    \end{tabular}
+\end{table}

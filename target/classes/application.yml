@@ -1,0 +1,167 @@
+spring:
+  application:
+    name: messageforge
+  
+  # Database Configuration
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/messageforge}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 15
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+
+  # Flyway Migration
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+    baseline-on-migrate: false
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        concurrency: 3
+        max-concurrency: 10
+        prefetch: 10
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: false
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  # CORS Configuration
+  web:
+    cors:
+      allowed-origins: ${FRONTEND_URL:http://localhost:3000}
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+  # Security
+  security:
+    user:
+      name: admin
+      password: admin
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-stacktrace: on_param
+  compression:
+    enabled: true
+    min-response-size: 1024
+
+# Spring Security & JWT
+app:
+  jwt:
+    secret: ${JWT_SECRET:your-super-secret-key-change-this-in-production-min-64-chars}
+    expiration: ${JWT_EXPIRATION_MS:900000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  
+  encryption:
+    key: ${ENCRYPTION_KEY:your-encryption-key-32-chars}
+
+  api-keys:
+    mailgun: ${MAILGUN_API_KEY:}
+    mailgun-domain: ${MAILGUN_DOMAIN:}
+    twilio-account-sid: ${TWILIO_ACCOUNT_SID:}
+    twilio-auth-token: ${TWILIO_AUTH_TOKEN:}
+    twilio-phone: ${TWILIO_PHONE:}
+    meta-app-id: ${META_APP_ID:}
+    meta-app-secret: ${META_APP_SECRET:}
+    slack-bot-token: ${SLACK_BOT_TOKEN:}
+    twitter-api-key: ${TWITTER_API_KEY:}
+    twitter-api-secret: ${TWITTER_API_SECRET:}
+
+  features:
+    email-enabled: true
+    sms-enabled: true
+    facebook-enabled: true
+    whatsapp-enabled: true
+    linkedin-enabled: true
+    slack-enabled: true
+    twitter-enabled: true
+    telegram-enabled: true
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.messageforge: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/messageforge.log
+
+# GraalVM Native Image Configuration (for Spring Native)
+graalvm:
+  native-image:
+    options:
+      - -H:+ReportExceptionStackTraces
+      - --enable-https

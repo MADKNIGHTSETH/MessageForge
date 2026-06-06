@@ -1,0 +1,81 @@
+\chapter{Architecture et Conception Technique}
+\label{chapter:conception}
+
+Ce chapitre présente la conception détaillée de l'application. Nous y décrivons l'implémentation rigoureuse des patrons de conception (\textit{Design Patterns}), l'architecture des WebSockets pour la communication en temps réel et la modélisation de la base de données.
+
+\section{Patrons de Conception Implémentés}
+
+Pour garantir la flexibilité, la réutilisabilité et la conformité aux principes SOLID (notamment le principe Ouvert/Fermé), nous avons structuré le moteur de traitement des messages autour de plusieurs patrons de conception :
+
+\subsection{1. Patron Strategy (Formatage des Canaux)}
+Le formatage d'un message brut diffère grandement selon le canal cible. Pour éviter des structures conditionnelles complexes (\texttt{if-else}), nous avons implémenté le patron \textbf{Strategy} \cite{designpatterns}.
+\begin{itemize}
+    \item \textbf{Interface} : L'interface \texttt{MessageFormatterStrategy} déclare deux méthodes clés : \texttt{format(String rawContent, JsonNode settings)} et \texttt{validate(String content)}.
+    \item \textbf{Stratégies Concrètes} : Chaque canal (Email, SMS, Twitter, Slack, LinkedIn, WhatsApp, Facebook, Telegram) implémente cette interface dans une classe dédiée (ex: \texttt{SmsFormatterStrategy}, \texttt{TwitterFormatterStrategy}).
+    \item \textbf{Contexte} : La classe \texttt{FormatterContext} maintient une table de hachage de toutes les stratégies disponibles. Au moment de générer les aperçus ou d'envoyer un message, le contexte sélectionne dynamiquement la bonne stratégie en fonction du type de canal.
+\end{itemize}
+
+\subsection{2. Patron Decorator (Enrichissement de Messages)}
+Avant le formatage final par canal, le message brut peut être enrichi d'éléments optionnels (emojis, signatures, hashtags, raccourcissement d'URLs). Ces modifications doivent pouvoir être combinées de façon dynamique. Le patron \textbf{Decorator} répond parfaitement à ce besoin \cite{designpatterns}.
+\begin{itemize}
+    \item \textbf{Structure} : La classe abstraite \texttt{MessageDecorator} implémente \texttt{MessageFormatterStrategy} et contient une référence vers une autre instance de \texttt{MessageFormatterStrategy} (le composant enveloppé).
+    \item \textbf{Décorateurs Concrets} :
+    \begin{itemize}
+        \item \texttt{EmojiDecorator} : Ajoute automatiquement des emojis pertinents.
+        \item \texttt{HashtagDecorator} : Génère ou ajoute des hashtags en fin de message.
+        \item \texttt{SignatureDecorator} : Ajoute la signature de l'expéditeur.
+        \item \texttt{UrlShortenerDecorator} : Détecte les liens HTTP et les remplace par des URLs courtes sous le domaine de la plateforme.
+    \end{itemize}
+    \item \textbf{Intérêt} : Les décorateurs peuvent être chaînés dans n'importe quel ordre à l'exécution (ex: appliquer d'abord le raccourcisseur d'URL, puis la signature, puis les hashtags).
+\end{itemize}
+
+\subsection{3. Patron Observer (Notifications Réseau)}
+Pour notifier l'utilisateur en temps réel de l'état d'avancement des envois sans coupler le service d'envoi et les contrôleurs réseau, nous utilisons le patron \textbf{Observer} sous forme d'événements Spring.
+Le service d'envoi (\texttt{MessageSenderService}) publie des événements de type \texttt{MessageStatusEvent} via l'interface \texttt{ApplicationEventPublisher}. Le contrôleur de WebSocket (\texttt{WebSocketController}) écoute ces événements et transmet les mises à jour aux clients abonnés.
+
+\subsection{4. Patron Builder (Construction d'Objets)}
+Les entités complexes telles que \texttt{Message} et \texttt{ChannelMessage} comportent de nombreux champs optionnels. L'utilisation du patron \textbf{Builder} (généré par l'annotation Lombok \texttt{@Builder}) nous permet d'instancier ces objets de manière claire, lisible et immuable.
+
+\section{Architecture Temps Réel via WebSockets (STOMP)}
+
+Pour offrir une expérience interactive, MessageForge utilise le protocole **STOMP** (\textit{Simple Text Oriented Messaging Protocol}) sur des canaux WebSocket. 
+
+La classe \texttt{WebSocketConfig} configure un point de connexion sur le chemin \texttt{/ws-preview} et active un courtier de messages simple (\textit{Simple Message Broker}) gérant les flux suivants :
+\begin{itemize}
+    \item **Abonnement** : Le client s'abonne à la destination \texttt{/topic/preview.\{userId\}} pour recevoir ses aperçus de messages, et à \texttt{/topic/send.progress.\{userId\}} pour suivre la progression de l'envoi en direct.
+    \item **Échange** : Le client envoie ses requêtes d'aperçu rapide à \texttt{/app/preview.request}. Le contrôleur traite la requête et renvoie immédiatement l'aperçu formaté sur le topic de l'utilisateur.
+\end{itemize}
+
+\section{Modélisation de la Base de Données}
+
+Le modèle de données relationnel de MessageForge est conçu pour être à la fois structuré pour la cohérence transactionnelle et flexible pour les métadonnées variables.
+
+Le diagramme de la base de données s'articule autour des tables principales suivantes :
+\begin{enumerate}
+    \item \textbf{users} : Enregistre les comptes utilisateurs (identifiant UUID, e-mail unique, nom d'affichage et mot de passe haché).
+    \item \textbf{messages} : Stocke les brouillons de messages créés par les utilisateurs, avec leur contenu brut, leur titre et un champ \texttt{metadata} de type JSONB.
+    \item \textbf{channel\_messages} : Contient le contenu mis en forme et finalisé pour chaque canal cible, lié au message principal par une clé étrangère (\textit{Foreign Key}).
+    \item \textbf{channel\_integrations} : Enregistre les configurations d'accès pour chaque canal (ex: clés API Twilio, tokens Slack) associées à chaque utilisateur. Les données sensibles (identifiants d'API) y sont stockées de façon chiffrée.
+    \item \textbf{refresh\_tokens} : Gère le cycle de vie des jetons de session (jetons JWT de rafraîchissement) pour le maintien des connexions.
+\end{enumerate}
+
+Le tableau ci-dessous décrit les relations physiques entre ces tables :
+
+\begin{table}[H]
+    \centering
+    \caption{Description des Clés Étrangères et Relations}
+    \label{tab:database_relations}
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \textbf{Table Source} & \textbf{Champ Source} & \textbf{Table Cible} & \textbf{Type de Relation} \\
+        \hline
+        \texttt{messages} & \texttt{user\_id} & \texttt{users} & Plusieurs-à-Un (N:1) \\
+        \hline
+        \texttt{channel\_messages} & \texttt{message\_id} & \texttt{messages} & Plusieurs-à-Un (N:1) \\
+        \hline
+        \texttt{channel\_integrations} & \texttt{user\_id} & \texttt{users} & Plusieurs-à-Un (N:1) \\
+        \hline
+        \texttt{refresh\_tokens} & \texttt{user\_id} & \texttt{users} & Un-à-Un (1:1) \\
+        \hline
+    \end{tabular}
+\end{table}
