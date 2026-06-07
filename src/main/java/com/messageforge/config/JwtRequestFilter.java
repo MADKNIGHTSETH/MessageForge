@@ -15,6 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -44,13 +45,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (userOpt.isPresent() && jwtTokenProvider.validateToken(jwt)) {
                 User user = userOpt.get();
                 
-                // Create principal details (simple empty authorities role)
-                org.springframework.security.core.userdetails.User principal = 
-                        new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPasswordHash(), new ArrayList<>());
+                // Create principal details with role-based authority
+                List<org.springframework.security.core.GrantedAuthority> authorities = new ArrayList<>();
+                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + user.getRole()));
                 
-                // Store the User entity as the primary principal details or principal object for controller injection
+                // Store the User entity as the primary principal object for controller injection
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        user, null, principal.getAuthorities()
+                        user, null, authorities
                 );
                 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -17,12 +17,16 @@ const register = async () => {
     return
   }
 
-  await authStore.register({
-    email: email.value,
-    password: password.value,
-    displayName: displayName.value,
-  })
-  router.push('/compose')
+  try {
+    await authStore.register({
+      email: email.value,
+      password: password.value,
+      displayName: displayName.value,
+    })
+    router.push('/compose')
+  } catch (apiError) {
+    error.value = apiError.message || 'Inscription impossible.'
+  }
 }
 </script>
 

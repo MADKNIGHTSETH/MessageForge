@@ -33,6 +33,7 @@ const email = computed(() => authStore.user?.email || "edwards@gmail.com");
 const isProfileOpen = ref(false);
 const addAccountStep = ref("list"); // 'list', 'selectType', 'login'
 const selectedNewAccountType = ref("");
+const accountError = ref("");
 const newAccountForm = ref({
   value: "",
   label: "",
@@ -61,6 +62,7 @@ const toggleProfile = () => {
 const resetAddAccount = () => {
   addAccountStep.value = "list";
   selectedNewAccountType.value = "";
+  accountError.value = "";
   newAccountForm.value = { value: "", label: "", password: "" };
 };
 
@@ -73,7 +75,8 @@ const selectAccountType = (type) => {
   addAccountStep.value = "login";
 };
 
-const submitNewAccount = () => {
+const submitNewAccount = async () => {
+  accountError.value = "";
   if (
     !newAccountForm.value.value ||
     !newAccountForm.value.label ||
@@ -81,16 +84,21 @@ const submitNewAccount = () => {
   )
     return;
 
-  authStore.addAccount({
-    type: selectedNewAccountType.value,
-    value: newAccountForm.value.value,
-    label: newAccountForm.value.label,
-  });
-  resetAddAccount();
+  try {
+    await authStore.addAccount({
+      type: selectedNewAccountType.value,
+      value: newAccountForm.value.value,
+      label: newAccountForm.value.label,
+      password: newAccountForm.value.password,
+    });
+    resetAddAccount();
+  } catch (error) {
+    accountError.value = error.message || "Connexion du compte impossible.";
+  }
 };
 
-const logout = () => {
-  authStore.logout();
+const logout = async () => {
+  await authStore.logout();
   router.push("/login");
   isProfileOpen.value = false;
 };
@@ -302,6 +310,12 @@ const logout = () => {
                     >
                       Se connecter
                     </button>
+                    <div
+                      v-if="accountError"
+                      class="rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700"
+                    >
+                      {{ accountError }}
+                    </div>
                   </div>
                 </div>
 

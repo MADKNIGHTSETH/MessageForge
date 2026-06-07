@@ -30,6 +30,12 @@ const isLinkedInActive = computed(() =>
   activeChannels.value.includes("LinkedIn"),
 );
 const charCount = computed(() => localText.value.length);
+const canSend = computed(
+  () =>
+    localText.value.trim().length > 0 &&
+    activeChannels.value.length > 0 &&
+    !messageStore.isSending,
+);
 
 const getAccountsFor = (type) => authStore.accountsByType(type);
 
@@ -95,8 +101,8 @@ const toggleDecorator = (key) => {
   requestPreview();
 };
 
-const sendMessage = () => {
-  messageStore.sendCurrentDraft();
+const sendMessage = async () => {
+  await messageStore.sendCurrentDraft();
 };
 
 watch(localText, () => {
@@ -126,6 +132,7 @@ watch(
 );
 
 onMounted(() => {
+  authStore.fetchConnectedAccounts().catch(() => null);
   requestPreview();
 });
 </script>
@@ -312,11 +319,22 @@ onMounted(() => {
         <button
           type="button"
           @click="sendMessage"
-          class="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+          :disabled="!canSend"
+          :class="[
+            'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition',
+            canSend ? 'bg-sky-600 hover:bg-sky-700' : 'cursor-not-allowed bg-slate-300',
+          ]"
         >
           <Send class="h-4 w-4" />
-          Envoyer le message
+          {{ messageStore.isSending ? "Envoi en cours..." : "Envoyer le message" }}
         </button>
+
+        <div
+          v-if="messageStore.error"
+          class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          {{ messageStore.error }}
+        </div>
       </div>
     </div>
 
@@ -344,6 +362,12 @@ onMounted(() => {
             class="rounded-3xl bg-white p-4 text-sm text-slate-500"
           >
             Génération de la prévisualisation...
+          </div>
+          <div
+            v-else-if="previewStore.error"
+            class="rounded-3xl bg-rose-50 p-4 text-sm text-rose-700"
+          >
+            {{ previewStore.error }}
           </div>
           <div
             v-else-if="previewStore.previews.length === 0"

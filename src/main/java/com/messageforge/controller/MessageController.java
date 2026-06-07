@@ -37,6 +37,13 @@ public class MessageController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PostMapping("/preview")
+    public ResponseEntity<List<PreviewResponse>> previewMessage(
+            @Valid @RequestBody PreviewRequest request) {
+        List<PreviewResponse> response = messageService.generatePreviews(request);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<MessageResponse> getMessage(
             @AuthenticationPrincipal User user,

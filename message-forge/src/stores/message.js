@@ -1,16 +1,37 @@
 import { defineStore } from 'pinia'
-import { generateUuid } from '../services/mockApi'
+import { messagesApi } from '../api/messages'
+import { ApiError } from '../api/client'
+import {
+  mapApiMessageToDraft,
+  mapApiMessageToHistory,
+  mapChannelMessagesToProgress,
+  mapDraftToApiPayload,
+  toApiChannel,
+} from '../api/mappers'
 
 const STORAGE_KEY = 'messageforge_messages'
 
-const createDraft = (userId = 'local-user') => ({
+const generateUuid = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+const createDraft = (userId = 'api-user') => ({
   id: generateUuid(),
+  remoteId: null,
   userId,
   subject: '',
   rawContent: '',
   recipients: [],
   activeChannels: ['Email', 'SMS'],
-  selectedAccounts: {}, // Mapping channel -> accountId
+  selectedAccounts: {},
   decorators: {
     emoji: true,
     hashtag: false,
@@ -20,7 +41,7 @@ const createDraft = (userId = 'local-user') => ({
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  status: 'draft',
+  status: 'DRAFT',
 })
 
 const loadState = () => {
@@ -30,6 +51,9 @@ const loadState = () => {
     return {}
   }
 }
+
+const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration))
+const isFinalStatus = (status) => status === 'SENT' || status === 'FAILED'
 
 export const useMessageStore = defineStore('message', {
   state: () => {
@@ -42,8 +66,13 @@ export const useMessageStore = defineStore('message', {
       history: saved.history || [],
       sendProgress: [],
       sendTimerId: null,
+      isSaving: false,
+      isSending: false,
+      isHistoryLoading: false,
+      error: '',
     }
   },
+
   actions: {
     persist() {
       localStorage.setItem(
@@ -54,7 +83,7 @@ export const useMessageStore = defineStore('message', {
           messages: this.messages,
           documents: this.documents,
           history: this.history,
-        })
+        }),
       )
     },
 
@@ -83,9 +112,43 @@ export const useMessageStore = defineStore('message', {
       this.persist()
     },
 
-    sendCurrentDraft() {
-      if (!this.currentDraft?.id || !this.currentDraft.activeChannels?.length) {
-        return
+    async saveCurrentDraft() {
+      if (!this.currentDraft.rawContent?.trim()) {
+        throw new Error('Saisissez un message avant de continuer.')
+      }
+
+      this.isSaving = true
+      const payload = mapDraftToApiPayload(this.currentDraft)
+
+      try {
+        let message
+        if (this.currentDraft.remoteId) {
+          try {
+            message = await messagesApi.updateMessage(this.currentDraft.remoteId, payload)
+          } catch (error) {
+            if (!(error instanceof ApiError) || error.status !== 404) {
+              throw error
+            }
+            message = await messagesApi.createMessage(payload)
+          }
+        } else {
+          message = await messagesApi.createMessage(payload)
+        }
+
+        const draft = mapApiMessageToDraft(message, this.currentDraft.userId)
+        this.currentDraft = draft
+        this.documents[draft.id] = { ...draft }
+        this.persist()
+        return message
+      } finally {
+        this.isSaving = false
+      }
+    },
+
+    async sendCurrentDraft() {
+      if (!this.currentDraft?.activeChannels?.length) {
+        this.error = 'Selectionnez au moins un canal.'
+        return null
       }
 
       if (this.sendTimerId) {
@@ -94,69 +157,92 @@ export const useMessageStore = defineStore('message', {
       }
 
       const channels = [...this.currentDraft.activeChannels]
-      this.sendProgress = channels.map((channel) => ({
-        channel,
-        status: 'PENDING',
-        progress: 0,
-        errorMessage: null,
-      }))
-      this.currentDraft.status = 'sending'
+      this.isSending = true
+      this.error = ''
+      this.sendProgress = mapChannelMessagesToProgress([], channels)
+      this.currentDraft.status = 'SENDING'
       this.persist()
 
-      let step = 0
-      this.sendTimerId = window.setInterval(() => {
-        const channel = channels[step]
-        if (!channel) {
-          clearInterval(this.sendTimerId)
-          this.sendTimerId = null
-          this.finalizeSend()
-          return
-        }
+      try {
+        const savedMessage = await this.saveCurrentDraft()
+        const response = await messagesApi.sendMessage(savedMessage.id, {
+          channels: channels.map(toApiChannel),
+          testMode: true,
+        })
 
-        this.sendProgress = this.sendProgress.map((item) =>
-          item.channel === channel
-            ? {
-                ...item,
-                status: channel === 'Messenger' ? 'FAILED' : 'SENT',
-                progress: 100,
-                errorMessage:
-                  channel === 'Messenger'
-                    ? 'Intégration Messenger indisponible'
-                    : null,
-              }
-            : item
-        )
-        step += 1
+        this.sendProgress = mapChannelMessagesToProgress(response.channelMessages, channels)
+        const finalMessage = await this.pollMessageStatus(savedMessage.id, channels)
+        const historyItem = mapApiMessageToHistory(finalMessage || response)
 
-        if (step >= channels.length) {
-          clearInterval(this.sendTimerId)
-          this.sendTimerId = null
-          this.finalizeSend()
-        }
-      }, 700)
+        this.history = [
+          historyItem,
+          ...this.history.filter((item) => item.id !== historyItem.id),
+        ]
+        this.messages = [
+          {
+            id: historyItem.id,
+            userId: historyItem.userId,
+            createdAt: historyItem.createdAt,
+          },
+          ...this.messages.filter((item) => item.id !== historyItem.id),
+        ]
+
+        this.currentDraft = createDraft(this.currentDraft.userId)
+        this.documents[this.currentDraft.id] = { ...this.currentDraft }
+        this.persist()
+        return historyItem
+      } catch (error) {
+        this.error = error.message || 'Envoi impossible.'
+        this.currentDraft.status = 'FAILED'
+        this.sendProgress = this.sendProgress.map((item) => ({
+          ...item,
+          status: 'FAILED',
+          progress: 100,
+          errorMessage: this.error,
+        }))
+        this.persist()
+        return null
+      } finally {
+        this.isSending = false
+      }
     },
 
-    finalizeSend() {
-      const messageRow = {
-        id: generateUuid(),
-        userId: this.currentDraft.userId,
-        createdAt: new Date().toISOString(),
-      }
-      const document = {
-        ...this.documents[this.currentDraft.id],
-        sentAt: new Date().toISOString(),
-        status: this.sendProgress.some((item) => item.status === 'FAILED') ? 'FAILED' : 'SENT',
+    async pollMessageStatus(messageId, fallbackChannels) {
+      let latest = null
+
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        await wait(700)
+        latest = await messagesApi.getMessage(messageId)
+        this.sendProgress = mapChannelMessagesToProgress(latest.channelMessages, fallbackChannels)
+
+        if (isFinalStatus(latest.status)) {
+          return latest
+        }
       }
 
-      this.messages.unshift(messageRow)
-      this.history.unshift(document)
-      this.currentDraft = createDraft(this.currentDraft.userId)
-      this.documents[this.currentDraft.id] = { ...this.currentDraft }
-      this.persist()
+      return latest
     },
 
-    loadHistory() {
-      return this.history
+    async loadHistory() {
+      this.isHistoryLoading = true
+      this.error = ''
+
+      try {
+        const response = await messagesApi.listMessages({ page: 0, size: 50 })
+        this.history = (response.messages || []).map(mapApiMessageToHistory)
+        this.messages = this.history.map((item) => ({
+          id: item.id,
+          userId: item.userId,
+          createdAt: item.createdAt,
+        }))
+        this.persist()
+        return this.history
+      } catch (error) {
+        this.error = error.message || "Impossible de charger l'historique."
+        return this.history
+      } finally {
+        this.isHistoryLoading = false
+      }
     },
 
     clearProgress() {

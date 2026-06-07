@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useMessageStore } from "../../stores/message";
 import {
   Mail,
@@ -31,8 +31,12 @@ const history = computed(() => {
     return messageStore.history;
   }
   return messageStore.history.filter((item) =>
-    item.activeChannels.includes(selectedFilter.value),
+    (item.activeChannels || []).includes(selectedFilter.value),
   );
+});
+
+onMounted(() => {
+  messageStore.loadHistory();
 });
 </script>
 
@@ -62,7 +66,14 @@ const history = computed(() => {
 
     <div class="space-y-4">
       <div
-        v-if="history.length === 0"
+        v-if="messageStore.isHistoryLoading"
+        class="rounded-3xl border border-sky-200 bg-sky-100 p-6 text-sm text-slate-600 text-center"
+      >
+        Chargement des messages...
+      </div>
+
+      <div
+        v-else-if="history.length === 0"
         class="rounded-3xl border border-sky-200 bg-sky-100 p-6 text-sm text-slate-600 text-center"
       >
         Aucun message trouvé pour ce filtre.

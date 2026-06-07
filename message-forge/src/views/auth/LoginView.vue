@@ -16,8 +16,12 @@ const login = async () => {
     return
   }
 
-  await authStore.login({ email: email.value, password: password.value })
-  router.push('/compose')
+  try {
+    await authStore.login({ email: email.value, password: password.value })
+    router.push('/compose')
+  } catch (apiError) {
+    error.value = apiError.message || 'Connexion impossible.'
+  }
 }
 </script>
 

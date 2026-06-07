@@ -54,12 +54,17 @@ onMounted(() => {
           </tr>
           <tr v-for="log in logs" :key="log.id" class="align-top text-slate-700">
             <td class="px-5 py-4 whitespace-nowrap">{{ new Date(log.createdAt).toLocaleString('fr-FR') }}</td>
-            <td class="px-5 py-4 font-mono text-xs">{{ log.adminId }}</td>
+            <td class="px-5 py-4 font-medium text-slate-950">{{ log.userEmail }}</td>
             <td class="px-5 py-4">
               <span class="rounded-full bg-sky-200 px-3 py-1 text-xs font-semibold text-sky-800">{{ log.action }}</span>
             </td>
             <td class="px-5 py-4">
-              <pre class="whitespace-pre-wrap rounded-2xl bg-sky-50 p-3 text-xs text-slate-700">{{ JSON.stringify(log.details, null, 2) }}</pre>
+              <div class="space-y-1">
+                <div v-if="log.entityType" class="text-[10px] text-slate-500 uppercase tracking-wider">
+                  {{ log.entityType }}: {{ log.entityId }}
+                </div>
+                <pre v-if="log.details" class="whitespace-pre-wrap rounded-2xl bg-sky-50 p-3 text-xs text-slate-700">{{ JSON.stringify(log.details, null, 2) }}</pre>
+              </div>
             </td>
           </tr>
         </tbody>

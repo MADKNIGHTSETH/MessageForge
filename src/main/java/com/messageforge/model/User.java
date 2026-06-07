@@ -31,6 +31,10 @@ public class User {
     
     @Column(columnDefinition = "TEXT")
     private String avatarUrl;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String role = "USER";
     
     @Column(nullable = false)
     @Builder.Default

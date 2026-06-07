@@ -149,6 +149,27 @@ public class MessageService {
         return previews;
     }
 
+    public List<PreviewResponse> generatePreviews(PreviewRequest request) {
+        List<PreviewResponse> previews = new ArrayList<>();
+        if (request.getRawContent() == null || request.getRawContent().isBlank()) {
+            return previews;
+        }
+
+        List<String> activeChannels = request.getActiveChannels();
+        if (activeChannels == null || activeChannels.isEmpty()) {
+            return previews;
+        }
+
+        for (String chanStr : activeChannels) {
+            ChannelType type = ChannelType.fromString(chanStr);
+            if (formatterContext.isChannelSupported(type)) {
+                previews.add(generateSinglePreview(request.getRawContent(), type, request.getDecorators()));
+            }
+        }
+
+        return previews;
+    }
+
     public PreviewResponse generateSinglePreview(String rawContent, ChannelType type, JsonNode decorators) {
         MessageFormatterStrategy baseStrategy = formatterContext.getAllStrategies().get(type);
         MessageFormatterStrategy decoratedStrategy = getDecoratedFormatter(baseStrategy, decorators);
