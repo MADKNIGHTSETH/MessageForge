@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/login", "/auth/register", "/auth/refresh").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/ws-preview/**").permitAll()
+                .requestMatchers("/channels", "/channels/*/rules").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
