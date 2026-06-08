@@ -75,7 +75,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  if (to.meta.requiresAuth && (!authStore.isAuthenticated || !authStore.hasValidJwt)) {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next({ path: '/login' })
   }
 

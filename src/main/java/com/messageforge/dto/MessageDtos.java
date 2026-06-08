@@ -24,6 +24,8 @@ public class MessageDtos {
         
         @Size(max = 255, message = "Title must not exceed 255 characters")
         private String title;
+
+        private String recipient;
         
         private JsonNode metadata;
     }
@@ -38,6 +40,8 @@ public class MessageDtos {
         
         @Size(max = 255, message = "Title must not exceed 255 characters")
         private String title;
+
+        private String recipient;
         
         private JsonNode metadata;
     }
@@ -48,6 +52,7 @@ public class MessageDtos {
     @Builder
     public static class SendMessageRequest {
         private List<String> channels;
+        private String recipient; // The phone number, email, or chat ID of the target
         private boolean testMode;
     }
     
@@ -59,6 +64,7 @@ public class MessageDtos {
         private UUID id;
         private String rawContent;
         private String title;
+        private String recipient;
         private String status;
         private List<ChannelMessageResponse> channelMessages;
         private LocalDateTime createdAt;

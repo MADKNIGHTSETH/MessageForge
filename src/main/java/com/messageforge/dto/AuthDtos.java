@@ -78,4 +78,15 @@ public class AuthDtos {
         private Boolean isActive;
         private String createdAt;
     }
+    
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class UpdateProfileRequest {
+        @Size(min = 2, max = 100, message = "Display name must be between 2 and 100 characters")
+        private String displayName;
+        
+        private String avatarUrl;
+    }
 }

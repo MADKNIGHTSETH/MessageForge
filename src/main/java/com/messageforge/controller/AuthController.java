@@ -46,4 +46,12 @@ public class AuthController {
         UserDto userDto = authService.mapToUserDto(user);
         return ResponseEntity.ok(userDto);
     }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserDto> updateProfile(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        UserDto updatedUser = authService.updateProfile(user, request);
+        return ResponseEntity.ok(updatedUser);
+    }
 }

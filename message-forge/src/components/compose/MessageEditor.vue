@@ -23,6 +23,7 @@ const authStore = useAuthStore();
 
 const localText = ref(messageStore.currentDraft.rawContent);
 const subjectText = ref(messageStore.currentDraft.subject);
+const recipientText = ref(messageStore.currentDraft.recipient);
 const activeChannels = computed(() => messageStore.currentDraft.activeChannels);
 const isEmailActive = computed(() => activeChannels.value.includes("Email"));
 const isSMSActive = computed(() => activeChannels.value.includes("SMS"));
@@ -52,6 +53,7 @@ const channelOptions = [
   { key: "Email", label: "Email", icon: Mail },
   { key: "SMS", label: "SMS", icon: Phone },
   { key: "LinkedIn", label: "LinkedIn", icon: Link },
+  { key: "Telegram", label: "Telegram", icon: Globe },
   { key: "Slack", label: "Slack", icon: MessageSquare },
   { key: "X", label: "X", icon: X },
   { key: "Messenger", label: "Messenger", icon: MessageCircle },
@@ -105,6 +107,11 @@ const sendMessage = async () => {
   await messageStore.sendCurrentDraft();
 };
 
+// Filter channels that have connected accounts
+const channelsWithAccounts = computed(() => {
+  return activeChannels.value.filter(ch => getAccountsFor(ch).length > 0);
+});
+
 watch(localText, () => {
   updateDraftText();
   requestPreview();
@@ -112,6 +119,10 @@ watch(localText, () => {
 
 watch(subjectText, () => {
   updateSubjectText();
+});
+
+watch(recipientText, (val) => {
+  messageStore.updateDraft({ recipient: val });
 });
 
 watch(
@@ -127,6 +138,7 @@ watch(
   () => {
     localText.value = messageStore.currentDraft.rawContent;
     subjectText.value = messageStore.currentDraft.subject;
+    recipientText.value = messageStore.currentDraft.recipient;
     requestPreview();
   },
 );
@@ -175,80 +187,29 @@ onMounted(() => {
         </div>
 
         <div
-          v-if="isEmailActive || isSMSActive || isLinkedInActive"
+          v-if="channelsWithAccounts.length > 0"
           class="rounded-3xl border border-sky-100 bg-sky-50 p-4"
         >
           <p class="mb-3 text-sm font-medium text-slate-700">
             Sélection des comptes expéditeurs
           </p>
           <div class="grid gap-3 sm:grid-cols-2">
-            <div v-if="isEmailActive" class="space-y-1.5">
+            <div v-for="channelKey in channelsWithAccounts" :key="channelKey" class="space-y-1.5">
               <label
                 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                >Compte Email</label
+                >Compte {{ channelKey }}</label
               >
               <div class="relative">
                 <select
+                  :value="messageStore.currentDraft.selectedAccounts[channelKey] || ''"
                   @change="
-                    (e) => updateSelectedAccount('Email', e.target.value)
-                  "
-                  class="w-full appearance-none rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-600"
-                >
-                  <option value="">Sélectionner un email</option>
-                  <option
-                    v-for="acc in getAccountsFor('Email')"
-                    :key="acc.id"
-                    :value="acc.id"
-                  >
-                    {{ acc.label }} ({{ acc.value }})
-                  </option>
-                </select>
-                <ChevronDown
-                  class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                />
-              </div>
-            </div>
-
-            <div v-if="isSMSActive" class="space-y-1.5">
-              <label
-                class="text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                >Numéro SMS</label
-              >
-              <div class="relative">
-                <select
-                  @change="(e) => updateSelectedAccount('SMS', e.target.value)"
-                  class="w-full appearance-none rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-600"
-                >
-                  <option value="">Sélectionner un numéro</option>
-                  <option
-                    v-for="acc in getAccountsFor('SMS')"
-                    :key="acc.id"
-                    :value="acc.id"
-                  >
-                    {{ acc.label }} ({{ acc.value }})
-                  </option>
-                </select>
-                <ChevronDown
-                  class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                />
-              </div>
-            </div>
-
-            <div v-if="isLinkedInActive" class="space-y-1.5">
-              <label
-                class="text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                >Compte LinkedIn</label
-              >
-              <div class="relative">
-                <select
-                  @change="
-                    (e) => updateSelectedAccount('LinkedIn', e.target.value)
+                    (e) => updateSelectedAccount(channelKey, e.target.value)
                   "
                   class="w-full appearance-none rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-600"
                 >
                   <option value="">Sélectionner un compte</option>
                   <option
-                    v-for="acc in getAccountsFor('LinkedIn')"
+                    v-for="acc in getAccountsFor(channelKey)"
                     :key="acc.id"
                     :value="acc.id"
                   >
@@ -261,6 +222,18 @@ onMounted(() => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="space-y-3">
+          <label class="text-sm font-medium text-slate-700"
+            >Destinataire (Numéro, Email, ou Chat ID)</label
+          >
+          <input
+            type="text"
+            v-model="recipientText"
+            placeholder="ex: +33612345678, test@mail.com, 123456789"
+            class="w-full rounded-3xl border border-sky-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-600"
+          />
         </div>
 
         <div class="space-y-3">

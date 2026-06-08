@@ -29,7 +29,7 @@ const createDraft = (userId = 'api-user') => ({
   userId,
   subject: '',
   rawContent: '',
-  recipients: [],
+  recipient: '',
   activeChannels: ['Email', 'SMS'],
   selectedAccounts: {},
   decorators: {
@@ -167,7 +167,8 @@ export const useMessageStore = defineStore('message', {
         const savedMessage = await this.saveCurrentDraft()
         const response = await messagesApi.sendMessage(savedMessage.id, {
           channels: channels.map(toApiChannel),
-          testMode: true,
+          recipient: this.currentDraft.recipient,
+          testMode: false,
         })
 
         this.sendProgress = mapChannelMessagesToProgress(response.channelMessages, channels)

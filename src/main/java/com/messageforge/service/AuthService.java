@@ -122,6 +122,19 @@ public class AuthService {
         }
     }
 
+    @Transactional
+    public UserDto updateProfile(User user, UpdateProfileRequest request) {
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName());
+        }
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+        User savedUser = userRepository.save(user);
+        log.info("Successfully updated profile for user: {}", user.getEmail());
+        return mapToUserDto(savedUser);
+    }
+
     public UserDto mapToUserDto(User user) {
         return UserDto.builder()
                 .id(user.getId())

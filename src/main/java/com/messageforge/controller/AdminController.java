@@ -26,6 +26,11 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getAllUsers());
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<GlobalStatsResponse> getStats() {
+        return ResponseEntity.ok(adminService.getGlobalStats());
+    }
+
     @PostMapping("/users/{id}/toggle-status")
     public ResponseEntity<UserDto> toggleUserStatus(
             @PathVariable UUID id,
@@ -37,5 +42,33 @@ public class AdminController {
     @GetMapping("/audit-logs")
     public ResponseEntity<List<AuditLogResponse>> getAuditLogs() {
         return ResponseEntity.ok(adminService.getAuditLogs());
+    }
+
+    @GetMapping("/templates")
+    public ResponseEntity<List<TemplateResponse>> getSystemTemplates() {
+        return ResponseEntity.ok(adminService.getSystemTemplates());
+    }
+
+    @PostMapping("/templates")
+    public ResponseEntity<TemplateResponse> createSystemTemplate(
+            @RequestBody TemplateRequest request,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(adminService.createSystemTemplate(request, admin));
+    }
+
+    @PutMapping("/templates/{id}")
+    public ResponseEntity<TemplateResponse> updateSystemTemplate(
+            @PathVariable UUID id,
+            @RequestBody TemplateRequest request,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(adminService.updateSystemTemplate(id, request, admin));
+    }
+
+    @DeleteMapping("/templates/{id}")
+    public ResponseEntity<Void> deleteSystemTemplate(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User admin) {
+        adminService.deleteSystemTemplate(id, admin);
+        return ResponseEntity.noContent().build();
     }
 }

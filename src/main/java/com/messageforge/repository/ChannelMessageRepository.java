@@ -31,4 +31,7 @@ public interface ChannelMessageRepository extends JpaRepository<ChannelMessage, 
     
     @Query("SELECT cm FROM ChannelMessage cm WHERE cm.status = 'PENDING' AND cm.retryCount < 3 ORDER BY cm.createdAt ASC LIMIT :limit")
     List<ChannelMessage> findPendingMessagesForProcessing(@Param("limit") int limit);
+
+    @Query("SELECT cm.channelType as channelType, cm.status as status, COUNT(cm) as count FROM ChannelMessage cm GROUP BY cm.channelType, cm.status")
+    List<Object[]> getChannelMessageStats();
 }

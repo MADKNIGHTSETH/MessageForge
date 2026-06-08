@@ -34,4 +34,11 @@ export const authApi = {
   me() {
     return apiRequest('/auth/me')
   },
+
+  updateProfile(payload) {
+    return apiRequest('/auth/me', {
+      method: 'PUT',
+      body: payload,
+    })
+  },
 }

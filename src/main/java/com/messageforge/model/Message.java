@@ -37,6 +37,9 @@ public class Message {
     
     @Column(length = 255)
     private String title;
+
+    @Column(length = 255)
+    private String recipient;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

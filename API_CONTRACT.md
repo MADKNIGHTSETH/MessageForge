@@ -47,6 +47,17 @@ These endpoints manage user registration, login, and session tokens.
 - **Description:** Retrieves the profile of the currently authenticated user.
 - **Response:** `200 OK` with `UserDto`.
 
+### PUT `/api/auth/me`
+- **Description:** Updates the profile of the currently authenticated user.
+- **Request Body:**
+  ```json
+  {
+    "displayName": "New Name",
+    "avatarUrl": "https://example.com/avatar.png"
+  }
+  ```
+- **Response:** `200 OK` with updated `UserDto`.
+
 ---
 
 ## 2. Channel & Integration Endpoints (`/api`)
@@ -140,7 +151,53 @@ These endpoints handle CRUD operations, formatting, and delivery for multi-chann
 
 ---
 
-## 4. System Endpoints (`/api/actuator`)
+## 4. Admin Endpoints (`/api/admin`)
+
+These endpoints require the `ADMIN` role.
+
+### GET `/api/admin/users`
+- **Description:** Retrieves a list of all users.
+- **Response:** `200 OK` with a list of `UserDto`.
+
+### POST `/api/admin/users/{id}/toggle-status`
+- **Description:** Activates or deactivates a user account.
+- **Request Body:**
+  ```json
+  {
+    "active": true
+  }
+  ```
+- **Response:** `200 OK` with updated `UserDto`.
+
+### GET `/api/admin/stats`
+- **Description:** Retrieves global usage statistics including total users, total messages, and channel-specific delivery metrics.
+- **Response:** `200 OK` with `GlobalStatsResponse`.
+
+### GET `/api/admin/audit-logs`
+- **Description:** Retrieves system-wide audit logs for administrative actions.
+- **Response:** `200 OK` with a list of `AuditLogResponse`.
+
+### GET `/api/admin/templates`
+- **Description:** Lists all system-wide message templates.
+- **Response:** `200 OK` with a list of `TemplateResponse`.
+
+### POST `/api/admin/templates`
+- **Description:** Creates a new system template.
+- **Request Body:** `TemplateRequest`
+- **Response:** `200 OK` with created `TemplateResponse`.
+
+### PUT `/api/admin/templates/{id}`
+- **Description:** Updates an existing system template.
+- **Request Body:** `TemplateRequest`
+- **Response:** `200 OK` with updated `TemplateResponse`.
+
+### DELETE `/api/admin/templates/{id}`
+- **Description:** Deletes a system template.
+- **Response:** `204 No Content`.
+
+---
+
+## 5. System Endpoints (`/api/actuator`)
 
 ### GET `/api/actuator/health` (also maps to `/health/readiness` and `/health/liveness`)
 - **Description:** Basic health check endpoint.
@@ -148,6 +205,6 @@ These endpoints handle CRUD operations, formatting, and delivery for multi-chann
 
 ---
 
-## 5. WebSockets (`/api/ws-preview`)
+## 6. WebSockets (`/api/ws-preview`)
 - **Description:** STOMP over WebSocket endpoint used for real-time formatting previews while composing messages.
 - **Message Mapping:** `@MessageMapping("/preview.request")`

@@ -46,19 +46,17 @@ export const useAuthStore = defineStore('auth', {
   },
 
   getters: {
-    isAuthenticated: (state) => !!state.token,
-    isAdmin: (state) => state.user?.role === 'ADMIN',
-    accountsByType: (state) => (type) => state.connectedAccounts.filter((acc) => acc.type === type),
-    hasValidJwt: (state) => {
+    isAuthenticated: (state) => {
       if (!state.token) return false
-
       try {
         const payload = decodeJwtPayload(state.token)
         return !payload?.exp || payload.exp > Math.floor(Date.now() / 1000)
       } catch {
-        return true
+        return false
       }
     },
+    isAdmin: (state) => state.user?.role === 'ADMIN',
+    accountsByType: (state) => (type) => state.connectedAccounts.filter((acc) => acc.type === type),
   },
 
   actions: {
@@ -168,6 +166,22 @@ export const useAuthStore = defineStore('auth', {
       await channelsApi.deleteIntegration(toApiChannel(account.type))
       this.connectedAccounts = this.connectedAccounts.filter((item) => item.id !== id)
       this.persist()
+    },
+
+    async updateProfile({ displayName, avatarUrl }) {
+      this.isLoading = true
+      this.error = ''
+      try {
+        const updatedUser = await authApi.updateProfile({ displayName, avatarUrl })
+        this.user = this.normalizeUser(updatedUser)
+        this.persist()
+        return this.user
+      } catch (error) {
+        this.error = error.message || 'Mise à jour impossible.'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
     },
 
     async logout() {

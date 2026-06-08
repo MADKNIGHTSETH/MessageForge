@@ -5,6 +5,8 @@ export const useAdminStore = defineStore('admin', {
   state: () => ({
     users: [],
     auditLogs: [],
+    stats: null,
+    templates: [],
     isLoading: false,
     error: '',
   }),
@@ -18,6 +20,57 @@ export const useAdminStore = defineStore('admin', {
         return this.users
       } catch (error) {
         this.error = error.message || 'Impossible de charger les utilisateurs.'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async fetchTemplates() {
+      this.isLoading = true
+      this.error = ''
+      try {
+        this.templates = await adminApi.getTemplates()
+        return this.templates
+      } catch (error) {
+        this.error = error.message || 'Impossible de charger les templates.'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async createTemplate(payload) {
+      this.error = ''
+      try {
+        const newTemplate = await adminApi.createTemplate(payload)
+        this.templates.unshift(newTemplate)
+        return newTemplate
+      } catch (error) {
+        this.error = error.message || 'Création impossible.'
+        throw error
+      }
+    },
+
+    async deleteTemplate(id) {
+      this.error = ''
+      try {
+        await adminApi.deleteTemplate(id)
+        this.templates = this.templates.filter((t) => t.id !== id)
+      } catch (error) {
+        this.error = error.message || 'Suppression impossible.'
+        throw error
+      }
+    },
+
+    async fetchStats() {
+      this.isLoading = true
+      this.error = ''
+      try {
+        this.stats = await adminApi.getStats()
+        return this.stats
+      } catch (error) {
+        this.error = error.message || 'Impossible de charger les statistiques.'
         throw error
       } finally {
         this.isLoading = false

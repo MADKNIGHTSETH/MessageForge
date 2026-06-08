@@ -64,6 +64,7 @@ public class MessageService {
                 .user(user)
                 .rawContent(request.getRawContent())
                 .title(request.getTitle() != null ? request.getTitle() : "Untitled Message")
+                .recipient(request.getRecipient())
                 .status(MessageStatus.DRAFT)
                 .metadata(request.getMetadata() != null ? request.getMetadata() : JsonNodeFactory.instance.objectNode())
                 .build();
@@ -90,6 +91,7 @@ public class MessageService {
 
         message.setRawContent(request.getRawContent());
         message.setTitle(request.getTitle() != null ? request.getTitle() : message.getTitle());
+        message.setRecipient(request.getRecipient() != null ? request.getRecipient() : message.getRecipient());
         if (request.getMetadata() != null) {
             message.setMetadata(request.getMetadata());
         }
@@ -248,7 +250,7 @@ public class MessageService {
         }
 
         // Trigger async send dispatch
-        messageSenderService.dispatchMessages(message, channelMessages, request.isTestMode());
+        messageSenderService.dispatchMessages(message, channelMessages, request.getRecipient(), request.isTestMode());
 
         MessageResponse response = mapToMessageResponse(message);
         // Include new unsent channel messages
@@ -287,6 +289,7 @@ public class MessageService {
                 .id(message.getId())
                 .rawContent(message.getRawContent())
                 .title(message.getTitle())
+                .recipient(message.getRecipient())
                 .status(message.getStatus().name())
                 .channelMessages(cmResponses)
                 .createdAt(message.getCreatedAt())

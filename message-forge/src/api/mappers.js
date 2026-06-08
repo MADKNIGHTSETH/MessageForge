@@ -89,14 +89,29 @@ export function integrationToAccount(integration) {
   }
 }
 
+const INTEGRATION_CREDENTIAL_MAPPERS = {
+  TELEGRAM: (account) => ({ botToken: account.password || '' }),
+  LINKEDIN: (account) => ({ accessToken: account.password || '' }),
+  EMAIL: (account) => ({ apiKey: account.password || '', domain: account.value || '' }),
+  SMS: (account) => ({ accountSid: account.value || '', authToken: account.password || '' }),
+  SLACK: (account) => ({ botToken: account.password || '' }),
+  X: (account) => ({ apiKey: account.value || '', apiSecret: account.password || '' }),
+  DEFAULT: (account) => ({ apiKey: account.password || '' })
+}
+
 export function accountToIntegrationPayload(account) {
+  const type = String(account.type || '').toUpperCase()
+  const mapper = INTEGRATION_CREDENTIAL_MAPPERS[type] || INTEGRATION_CREDENTIAL_MAPPERS.DEFAULT
+  
+  const credentials = {
+    recipient: account.value || '',
+    testRecipient: account.value || '',
+    ...mapper(account)
+  }
+
   return {
     enabled: true,
-    credentials: {
-      apiKey: account.apiKey || account.password || account.value || 'ui-configured',
-      recipient: account.value || '',
-      testRecipient: account.value || '',
-    },
+    credentials,
     settings: {
       label: account.label || account.type,
       value: account.value || '',
@@ -123,6 +138,7 @@ export function mapDraftToApiPayload(draft) {
   return {
     title: subject.trim() || 'Untitled Message',
     rawContent: draft.rawContent || '',
+    recipient: draft.recipient || '',
     metadata: {
       ...(draft.metadata || {}),
       subject,
@@ -157,6 +173,7 @@ export function mapApiMessageToDraft(message, userId = 'api-user') {
     userId,
     subject: metadata.subject || message.title || '',
     rawContent: message.rawContent || '',
+    recipient: message.recipient || '',
     recipients: metadata.recipients || [],
     activeChannels: channelsFromMessage(message),
     selectedAccounts: metadata.selectedAccounts || {},

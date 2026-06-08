@@ -42,7 +42,7 @@ public class MessageSenderService {
 
     @Async
     @Transactional
-    public void dispatchMessages(Message message, List<ChannelMessage> channelMessages, boolean testMode) {
+    public void dispatchMessages(Message message, List<ChannelMessage> channelMessages, String recipient, boolean testMode) {
         log.info("Starting async message dispatching for message: {}", message.getId());
         User user = message.getUser();
         boolean overallSuccess = true;
@@ -69,33 +69,38 @@ public class MessageSenderService {
 
             DeliveryResult result = DeliveryResult.failure("Not executed");
             try {
-                String recipient = getRecipientForChannel(cm.getChannelType(), decryptedCreds);
+                // Priority: 1. Explicit recipient from request, 2. Default from integration, 3. Example address
+                String targetAddress = recipient;
+                if (targetAddress == null || targetAddress.isBlank()) {
+                    targetAddress = getRecipientForChannel(cm.getChannelType(), decryptedCreds);
+                }
+                
                 String content = cm.getFormattedContent();
 
                 switch (cm.getChannelType()) {
                     case EMAIL:
-                        result = mailgunClient.sendEmail(recipient, message.getTitle(), content, decryptedCreds);
+                        result = mailgunClient.sendEmail(targetAddress, message.getTitle(), content, decryptedCreds);
                         break;
                     case SMS:
-                        result = twilioClient.sendSms(recipient, content, decryptedCreds);
+                        result = twilioClient.sendSms(targetAddress, content, decryptedCreds);
                         break;
                     case FACEBOOK:
-                        result = metaGraphApiClient.sendFacebookMessage(recipient, content, decryptedCreds);
+                        result = metaGraphApiClient.sendFacebookMessage(targetAddress, content, decryptedCreds);
                         break;
                     case WHATSAPP:
-                        result = metaGraphApiClient.sendWhatsappMessage(recipient, content, decryptedCreds);
+                        result = metaGraphApiClient.sendWhatsappMessage(targetAddress, content, decryptedCreds);
                         break;
                     case LINKEDIN:
-                        result = linkedinApiClient.sharePost(recipient, content, decryptedCreds);
+                        result = linkedinApiClient.sharePost(targetAddress, content, decryptedCreds);
                         break;
                     case SLACK:
-                        result = slackApiClient.postMessage(recipient, content, decryptedCreds);
+                        result = slackApiClient.postMessage(targetAddress, content, decryptedCreds);
                         break;
                     case TWITTER:
                         result = twitterApiClient.createTweet(content, decryptedCreds);
                         break;
                     case TELEGRAM:
-                        result = telegramApiClient.sendTelegramMessage(recipient, content, decryptedCreds);
+                        result = telegramApiClient.sendTelegramMessage(targetAddress, content, decryptedCreds);
                         break;
                 }
             } catch (Exception e) {

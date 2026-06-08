@@ -1,0 +1,15 @@
+com/messageforge/service/ChannelIntegrationService$1.class
+com/messageforge/dto/AdminDtos$TemplateRequest$TemplateRequestBuilder.class
+com/messageforge/dto/AdminDtos$TemplateResponse.class
+com/messageforge/repository/FormatterTemplateRepository.class
+com/messageforge/dto/AdminDtos$GlobalStatsResponse$GlobalStatsResponseBuilder.class
+com/messageforge/model/FormatterTemplate.class
+com/messageforge/dto/AuthDtos$UpdateProfileRequest$UpdateProfileRequestBuilder.class
+com/messageforge/dto/AdminDtos$TemplateRequest.class
+com/messageforge/model/FormatterTemplate$FormatterTemplateBuilder.class
+com/messageforge/dto/AdminDtos$ChannelStats$ChannelStatsBuilder.class
+com/messageforge/dto/AdminDtos$GlobalStatsResponse.class
+com/messageforge/dto/AuthDtos$UpdateProfileRequest.class
+com/messageforge/dto/AdminDtos$TemplateResponse$TemplateResponseBuilder.class
+com/messageforge/service/MessageSenderService$1.class
+com/messageforge/dto/AdminDtos$ChannelStats.class

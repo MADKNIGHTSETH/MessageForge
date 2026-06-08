@@ -16,11 +16,14 @@ import {
 } from "@lucide/vue";
 import NavBar from "./components/NavBar.vue";
 import { useAuthStore } from "./stores/auth";
+import { useChannelStore } from "./stores/channel";
 import { useRouter } from "vue-router";
+import { onMounted } from "vue";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const channelStore = useChannelStore();
 
 const isAuthPage = computed(
   () => route.name === "Login" || route.name === "Register",
@@ -41,6 +44,7 @@ const newAccountForm = ref({
 });
 
 const connectedAccounts = computed(() => authStore.connectedAccounts);
+const availableChannelTypes = computed(() => channelStore.availableChannels);
 
 const typeIcons = {
   Email: Mail,
@@ -50,7 +54,75 @@ const typeIcons = {
   X: XIcon,
   Messenger: MessageCircle,
   WhatsApp: Globe,
+  Telegram: Globe // Add a fallback icon for Telegram as well
 };
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    channelStore.fetchChannels();
+  }
+});
+
+const FORM_CONFIG = {
+  Email: {
+    valueLabel: "Domaine Mailgun",
+    valuePlaceholder: "ex: sandbox.mailgun.org",
+    valueType: "text",
+    passwordLabel: "Clé API",
+    passwordPlaceholder: "key-...",
+    passwordType: "password"
+  },
+  Telegram: {
+    valueLabel: "Chat ID",
+    valuePlaceholder: "ex: 123456789",
+    valueType: "text",
+    passwordLabel: "Bot Token",
+    passwordPlaceholder: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+    passwordType: "password"
+  },
+  LinkedIn: {
+    valueLabel: "Author URN / Identifiant",
+    valuePlaceholder: "urn:li:person:XXXXXXX",
+    valueType: "text",
+    passwordLabel: "Access Token",
+    passwordPlaceholder: "AQV...",
+    passwordType: "password"
+  },
+  SMS: {
+    valueLabel: "Account SID (Twilio)",
+    valuePlaceholder: "AC...",
+    valueType: "text",
+    passwordLabel: "Auth Token",
+    passwordPlaceholder: "••••••••",
+    passwordType: "password"
+  },
+  Slack: {
+    valueLabel: "Workspace / Channel ID",
+    valuePlaceholder: "C12345678",
+    valueType: "text",
+    passwordLabel: "Bot Token",
+    passwordPlaceholder: "xoxb-...",
+    passwordType: "password"
+  },
+  X: {
+    valueLabel: "API Key",
+    valuePlaceholder: "...",
+    valueType: "text",
+    passwordLabel: "API Secret",
+    passwordPlaceholder: "••••••••",
+    passwordType: "password"
+  },
+  DEFAULT: {
+    valueLabel: "Identifiant / Domaine",
+    valuePlaceholder: "ex: 123456789",
+    valueType: "text",
+    passwordLabel: "Token / Clé API",
+    passwordPlaceholder: "••••••••",
+    passwordType: "password"
+  }
+};
+
+const getFormConfig = (type) => FORM_CONFIG[type] || FORM_CONFIG.DEFAULT;
 
 const toggleProfile = () => {
   isProfileOpen.value = !isProfileOpen.value;
@@ -147,6 +219,7 @@ const logout = async () => {
               <!-- Profile Dropdown with Multi-step Accounts -->
               <div
                 v-if="isProfileOpen"
+                @click.stop
                 class="absolute right-0 top-full z-50 mt-2 w-80 rounded-2xl border border-sky-100 bg-white p-5 shadow-xl shadow-blue-900/10"
               >
                 <!-- Step 1: Account List -->
@@ -177,7 +250,7 @@ const logout = async () => {
                       </div>
                     </div>
                     <button
-                      @click="startAddAccount"
+                      @click.stop="startAddAccount"
                       class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-sky-300 py-2.5 text-xs font-medium text-sky-600 transition hover:bg-sky-50"
                     >
                       <Plus class="h-3 w-3" />
@@ -190,10 +263,11 @@ const logout = async () => {
                 <div
                   v-else-if="addAccountStep === 'selectType'"
                   class="space-y-4"
+                  @click.stop
                 >
                   <div class="flex items-center gap-2">
                     <button
-                      @click="addAccountStep = 'list'"
+                      @click.stop="addAccountStep = 'list'"
                       class="text-slate-400 hover:text-slate-600"
                     >
                       <Plus class="h-4 w-4 rotate-45" />
@@ -204,17 +278,9 @@ const logout = async () => {
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <button
-                      v-for="type in [
-                        'Email',
-                        'SMS',
-                        'LinkedIn',
-                        'Slack',
-                        'X',
-                        'Messenger',
-                        'WhatsApp',
-                      ]"
+                      v-for="type in availableChannelTypes"
                       :key="type"
-                      @click="selectAccountType(type)"
+                      @click.stop="selectAccountType(type)"
                       class="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-xs transition hover:bg-sky-50 hover:text-sky-700 hover:border-sky-100"
                     >
                       <component :is="typeIcons[type]" class="h-3.5 w-3.5" />
@@ -224,10 +290,10 @@ const logout = async () => {
                 </div>
 
                 <!-- Step 3: Login Form -->
-                <div v-else-if="addAccountStep === 'login'" class="space-y-4">
+                <div v-else-if="addAccountStep === 'login'" class="space-y-4" @click.stop>
                   <div class="flex items-center gap-2">
                     <button
-                      @click="addAccountStep = 'selectType'"
+                      @click.stop="addAccountStep = 'selectType'"
                       class="text-slate-400 hover:text-slate-600"
                     >
                       <Plus class="h-4 w-4 rotate-45" />
@@ -250,57 +316,24 @@ const logout = async () => {
                       />
                     </div>
                     <div class="space-y-1">
-                      <label
-                        class="text-[10px] font-bold uppercase text-slate-400"
-                      >
-                        {{
-                          selectedNewAccountType === "SMS" ||
-                          selectedNewAccountType === "WhatsApp"
-                            ? "Numéro de téléphone"
-                            : selectedNewAccountType === "Email"
-                              ? "Adresse Email"
-                              : "Identifiant / Username"
-                        }}
+                      <label class="text-[10px] font-bold uppercase text-slate-400">
+                        {{ getFormConfig(selectedNewAccountType).valueLabel }}
                       </label>
                       <input
                         v-model="newAccountForm.value"
-                        :type="
-                          selectedNewAccountType === 'Email' ? 'email' : 'text'
-                        "
-                        :placeholder="
-                          selectedNewAccountType === 'SMS' ||
-                          selectedNewAccountType === 'WhatsApp'
-                            ? '+33 6...'
-                            : '...'
-                        "
+                        :type="getFormConfig(selectedNewAccountType).valueType"
+                        :placeholder="getFormConfig(selectedNewAccountType).valuePlaceholder"
                         class="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-sky-500 transition shadow-sm"
                       />
                     </div>
                     <div class="space-y-1">
-                      <label
-                        class="text-[10px] font-bold uppercase text-slate-400"
-                      >
-                        {{
-                          selectedNewAccountType === "SMS" ||
-                          selectedNewAccountType === "WhatsApp"
-                            ? "Code de validation"
-                            : "Mot de passe"
-                        }}
+                      <label class="text-[10px] font-bold uppercase text-slate-400">
+                        {{ getFormConfig(selectedNewAccountType).passwordLabel }}
                       </label>
                       <input
                         v-model="newAccountForm.password"
-                        :type="
-                          selectedNewAccountType === 'SMS' ||
-                          selectedNewAccountType === 'WhatsApp'
-                            ? 'text'
-                            : 'password'
-                        "
-                        :placeholder="
-                          selectedNewAccountType === 'SMS' ||
-                          selectedNewAccountType === 'WhatsApp'
-                            ? '000000'
-                            : '••••••••'
-                        "
+                        :type="getFormConfig(selectedNewAccountType).passwordType"
+                        :placeholder="getFormConfig(selectedNewAccountType).passwordPlaceholder"
                         class="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-sky-500 transition shadow-sm"
                       />
                     </div>
